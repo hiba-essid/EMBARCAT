@@ -1,11 +1,13 @@
-# 📟 STM32 ADC with DMA (Circular Mode) – Potentiometer Reading via UART
+# 📟 STM32 ADC with DMA (Circular Mode) – Potentiometer Reading with Reactive LED
 
 ## 📌 Description
 
 This project demonstrates how to read an **analog signal from a potentiometer** using the **ADC of an STM32F446RE (Nucleo board)** with **DMA in circular mode**, and send the results to a PC through **UART (USART2)**.
 The output is displayed using **PuTTY** (or any serial terminal).
 
-The ADC value is continuously updated by DMA, converted into voltage and percentage, and printed every 500 ms.
+**New Feature:** The **LED LD2 blink speed changes dynamically** based on the measured voltage level, providing visual feedback of the potentiometer position.
+
+The ADC uses a **4-sample circular buffer with averaging** to smooth readings. Values are displayed every **2 seconds** and the LED behavior updates every **100 ms**.
 
 ---
 
@@ -51,6 +53,8 @@ The ADC value is continuously updated by DMA, converted into voltage and percent
 * Mode: **Continuous conversion**
 * Sampling time: **480 cycles**
 * DMA: **Enabled (circular mode)**
+* Buffer: **4 samples** (for averaging)
+* Sampling interval: **100 ms**
 
 ### DMA
 
@@ -87,36 +91,61 @@ The ADC value is continuously updated by DMA, converted into voltage and percent
 ## 📊 Output Example (PuTTY)
 
 ```
-=================================
-Lecture ADC avec DMA Circulaire
-STM32F446RE Nucleo - Potentiometre sur PA0 (ADC1_IN0)
-=================================
+ADC Demo - PA0
+3.3V ref | 12-bit
+Display: every 2s | LED: speed = voltage
 
-ADC: 2048 | Tension: 1.650 V | %: 50.0%
-ADC: 3072 | Tension: 2.476 V | %: 75.0%
-ADC: 1023 | Tension: 0.825 V | %: 25.0%
+ADC: 2048 | 1.650 V | 50.0% | LED: 1000ms
+ADC: 3072 | 2.476 V | 75.0% | LED: 250ms
+ADC: 1023 | 0.825 V | 25.0% | LED: 0ms (OFF)
 ```
 
 * **ADC**: raw 12-bit value (0–4095)
-* **Tension**: converted voltage (0–3.3 V)
+* **V**: converted voltage (0–3.3 V)
 * **%**: position of the potentiometer
+* **LED**: current blink interval in milliseconds
 
 ---
 
-## 💡 Notes
+## 💡 LED Behavior by Voltage
 
-* DMA continuously updates `adc_value` without CPU intervention
-* The variable is declared `volatile` to ensure correct behavior
-* LED LD2 toggles every 500 ms to show the system is running
+| Voltage (V)   | LED Behavior           | Blink Interval |
+|---------------|------------------------|----------------|
+| < 1.0         | OFF                    | -              |
+| 1.0 – 1.5     | Very slow blink        | 2000 ms        |
+| 1.5 – 2.0     | Slow blink             | 1000 ms        |
+| 2.0 – 2.25    | Medium blink           | 500 ms         |
+| 2.25 – 2.5    | Fast blink             | 250 ms         |
+| > 2.5         | Very fast blink        | 100 ms         |
 
 ---
 
-## 🚀 Possible Improvements
+## 🔧 Notes
 
-* Add ADC averaging or filtering
+* DMA continuously updates the **4-sample circular buffer** without CPU intervention
+* **Averaging** is applied to smooth ADC readings and avoid flickering
+* Variables are declared `volatile` to ensure correct behavior
+* **LED blink speed** reflects the measured voltage in real-time
+* **Low power mode** (`__WFI()`) is used in the main loop to reduce power consumption
+* Display interval: **2 seconds** | ADC sampling: **100 ms**
+
+---
+
+## ✅ Implemented Improvements
+
+* ✔️ ADC averaging with 4-sample buffer
+* ✔️ Voltage-based LED behavior (reactive feedback)
+* ✔️ Low power mode with `__WFI()`
+* ✔️ Optimized UART output format
+
+---
+
+## 🚀 Possible Future Improvements
+
+* Add more ADC channels for multiple sensors
 * Use interrupt callbacks instead of polling
 * Send data via USB CDC instead of UART
-* Add multiple ADC channels
+* Add hysteresis to prevent LED flickering at threshold boundaries
 
 ---
 
